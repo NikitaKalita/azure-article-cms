@@ -1,22 +1,34 @@
-"""
-The flask application package.
-"""
-
+import os
 from flask import Flask
-from config import Config
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
-import logging
 
-app = Flask(__name__)
-app.config.from_object(Config)
+db = SQLAlchemy()
 
-# Logging setup
-logging.basicConfig(level=logging.INFO)
+def create_app():
+    app = Flask(__name__)
 
-db = SQLAlchemy(app)
+    # Basic Flask config
+    app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "secret123")
+    app.config['FLASK_ENV'] = os.environ.get("FLASK_ENV", "production")
 
-login = LoginManager(app)
-login.login_view = 'login'
+    # Database (SQLite default for safety)
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+        "DATABASE_URL",
+        "sqlite:///app.db"
+    )
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-from FlaskWebProject import views, models
+    # Azure Blob config
+    app.config['BLOB_CONTAINER'] = os.environ.get("BLOB_CONTAINER", "images")
+    app.config['BLOB_CONNECTION_STRING'] = os.environ.get("BLOB_CONNECTION_STRING", "")
+
+    db.init_app(app)
+
+    with app.app_context():
+        from FlaskWebProject import views, models
+        db.create_all()
+
+    return app
+
+
+app = create_app()
